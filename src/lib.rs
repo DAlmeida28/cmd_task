@@ -24,10 +24,10 @@ impl Task {
       .append(true)
       .create(true)
       .open("db.json")
-      .map_err(|e| std::io::Error::new(e.kind(), "Could not open DB fiel"))?;
+      .map_err(|e| std::io::Error::new(e.kind(), "Could not open DB file"))?;
 
     writeln!(tofile, "{}", tojson)
-      .map_err(|e| std::io::Error::new(e.kind(), "Could not write to db.json "))?;
+      .map_err(|e| std::io::Error::new(e.kind(), "Could not write to DB file"))?;
 
     Ok(())
   }
