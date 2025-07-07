@@ -1,12 +1,15 @@
 use clap::Parser;
-use cmd_task::tasklib::{Task};
+use cmd_task::tasklib::{Task, DB};
 
 fn main() {
-Task::check_taskdb();       
+    DB::check_taskdb();       
     
     let task_arg = Task::parse();
-    println!("{:?}", task_arg);
 
-
+    if let Err(e) = task_arg.save() {
+        eprintln!("Error saving task: {}", e);
+    } else {
+        println!("Task Saved!");
+    }
 
 }
