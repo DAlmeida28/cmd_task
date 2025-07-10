@@ -1,15 +1,13 @@
 use clap::Parser;
-use cmd_task::tasklib::{Task, DB};
+use cmd_task::tasklib::*;
 
 fn main() {
-    DB::check_taskdb();       
-    
-    let task_arg = Task::parse();
+  let cli = Cli::parse();
 
-    if let Err(e) = task_arg.save() {
-        eprintln!("Error saving task: {}", e);
-    } else {
-        println!("Task Saved!");
+  match cli.command {
+    Commands::Add(input) => {
+      Task::add_task(input.id, input.title.expect("No title Provided."), input.description.expect("No Description provided."), input.due_date.expect("No due date provided."), input.status );
     }
-
+    Commands::List => { Task::list_task(); }
+  }
 }

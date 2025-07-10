@@ -1,14 +1,43 @@
 pub mod tasklib{
 
-use std::{fs, fs::File};
-use std::io::{Write, Result};
-use clap::{Parser, ValueEnum };
-use serde::Serialize;
+use std::fmt::{self};
+use std::{fs::File};
+use std::io::{BufReader, Write};
+use clap::{Args, Parser, Subcommand, ValueEnum };
+use std::path::Path;
+use serde::{Deserialize, Serialize};
 
-#[derive(Parser, Debug, Serialize)]
+
+#[derive(Clone, Parser)]
 #[command(version, about, long_about = None)]
+pub struct Cli {
+  #[command(subcommand)]
+  pub command: Commands,
+}
+
+#[derive(Subcommand, Clone)]
+pub enum Commands{
+  Add(CLiTaskInput),
+  List,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CLiTaskInput {
+  #[arg(short, long)]
+  pub id: u32,
+  #[arg(short, long)]
+  pub title: Option<String>,
+  #[arg(short, long)]
+  pub description: Option<String>, 
+  #[arg(short = 'u', long)]
+  pub due_date: Option<String>,
+  #[arg(short, long)]
+  pub status: Status,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Task {
-  id: u32,
+  pub id: u32,
   pub title: String,
   pub due_date: String,
   pub description: String,
@@ -16,42 +45,70 @@ pub struct Task {
 }
 
 impl Task {
-  pub fn save(&self) -> std::io::Result<()>{
-    let tojson = serde_json::to_string(self)
-      .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+  pub fn add_task (id: u32, title: String, due_date: String, description: String, status: Status){
+    let mut ldb = DB::load_db();
 
-    let mut tofile = std::fs::File::options()
-      .append(true)
-      .create(true)
-      .open("db.json")
-      .map_err(|e| std::io::Error::new(e.kind(), "Could not open DB file"))?;
+    let task = Task { 
+      id,
+      title,
+      due_date,
+      description,
+      status
+    };
 
-    writeln!(tofile, "{}", tojson)
-      .map_err(|e| std::io::Error::new(e.kind(), "Could not write to DB file"))?;
+    ldb.tasks.push(task);
+    DB::save_db(&ldb);
+    println!("Task saved succesfully!");
+   }
 
-    Ok(())
+  pub fn list_task() {
+    let ldb = DB::load_db();
+    println!("Tasks: ");
+    for task in ldb.tasks {
+      println!("id: {}, title: {}, description: {}, due-date: {}, status: {}", task.id, task.title, task.description, task.due_date, task.status)
+    }
   }
-}
+  }
 
+#[derive(Serialize, Deserialize, Default)]
 pub struct DB {
-  filepath: String
+  pub tasks: Vec<Task>,
 }
 
 impl DB {
-  pub fn check_taskdb() {
-    let db_file = fs::metadata("db.json").is_ok();
-      match db_file{
-        true => println!("db Found"),
-        false => {let db = File::create("db.json");},
+ pub fn load_db() -> DB {
+  if Path::new("db.json").exists() {
+    let file = File::open("db.json").expect("failed to open db.json");
+    let reader = BufReader::new(file);
+    serde_json::from_reader(reader).expect("Failed to read new file")
+    } else {
+      DB::default()
+    }
   }
- }
+
+  pub fn save_db(db: &DB) {
+    let json = serde_json::to_string_pretty(db).expect("Failed to serialize database");
+    let mut file = File::create("db.json").expect("Failed to write to db.json");
+    file.write_all(json.as_bytes()).expect("failed to write JSON to db.json");
+  }
 }
 
 
-#[derive(Debug, Clone, ValueEnum, Serialize)]
+#[derive(Debug, Clone, ValueEnum, Serialize, Deserialize,)]
 pub enum Status {
   Open,
   Pending,
   Completed,
 }
+
+impl fmt::Display for Status {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let status = match self {
+      Status::Open => "Open",
+      Status::Pending => "Pending",
+      Status::Completed => "Completed"
+    };
+    write!(f, "{}", status)
+  }
+  }
 }
