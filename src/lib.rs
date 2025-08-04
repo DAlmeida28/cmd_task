@@ -7,6 +7,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum };
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 
+use crate::create_id;
+
 
 #[derive(Clone, Parser)]
 #[command(version, about, long_about = None)]
@@ -24,8 +26,6 @@ pub enum Commands{
 #[derive(Args, Debug, Clone)]
 pub struct CLiTaskInput {
   #[arg(short, long)]
-  pub id: u32,
-  #[arg(short, long)]
   pub title: Option<String>,
   #[arg(short, long)]
   pub description: Option<String>, 
@@ -37,7 +37,7 @@ pub struct CLiTaskInput {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Task {
-  pub id: u32,
+  pub id: String,
   pub title: String,
   pub due_date: String,
   pub description: String,
@@ -45,9 +45,9 @@ pub struct Task {
 }
 
 impl Task {
-  pub fn add_task (id: u32, title: String, due_date: String, description: String, status: Status){
+  pub fn add_task (title: String, due_date: String, description: String, status: Status){
     let mut ldb = DB::load_db();
-
+    let id = create_id();
     let task = Task { 
       id,
       title,
@@ -67,6 +67,10 @@ impl Task {
     for task in ldb.tasks {
       println!("id: {}, title: {}, description: {}, due-date: {}, status: {}", task.id, task.title, task.description, task.due_date, task.status)
     }
+  }
+
+  pub fn gen_id() {
+
   }
   }
 
@@ -111,4 +115,17 @@ impl fmt::Display for Status {
     write!(f, "{}", status)
   }
   }
+}
+
+fn create_id() -> String {
+  let date = chrono::offset::Local::now().to_string();
+  let date_slice = &date[5..10];
+
+  let mut id: i32 = 1;
+  if id >= 1 {
+    id += 1;
+  }
+  
+  let id_string: String = date_slice.to_string() + &id.to_string();
+  id_string
 }
